@@ -1,0 +1,18 @@
+_service=1
+
+if [[ ! -z "$1" ]]; then
+  service="$1"
+fi
+
+_service_line=""
+read -t 0.1 _service_line
+
+_multiupload_secret="$(passveil show peertube/multiupload.json)"
+
+if [[ -z "${_service_line}" ]]; then
+  _service_line="$(echo "$_multiupload_secret" | jq -c '.[]' | sed "${_service}q;d")"
+fi
+
+echo $_service_line | jq -r ".address"
+echo $_service_line | jq -r ".username"
+echo $_service_line | jq -r ".password"

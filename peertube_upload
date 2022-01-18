@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+if [[ -z "$1" ]]; then
+  echo "Provide video description in first argument"
+  exit 228
+fi
+
+_multiupload_secret="$(passveil show peertube/multiupload.json)"
+
+echo "$_multiupload_secret" | jq -c '.[]' | while read x; do
+
+done

@@ -1,0 +1,37 @@
+read _fqdn
+read _username
+read _password
+
+if [[ -z "$1" ]]; then
+  echo "You have to at least supply the path in first argument, lol"
+  exit 221
+fi
+_api_path="$1"
+shift
+
+_method="GET"
+if [[ ! -z "$1" ]]; then
+  _method="$1"
+  shift
+fi
+
+
+_api_url="https://${_fqdn}/api/v1"
+_oauth_client_data="$(http -b GET "${_api_url}/oauth-clients/local")"
+
+_client_id="$(echo "$_oauth_client_data" | jq -r '.client_id')"
+_client_secret="$(echo "$_oauth_client_data" | jq -r '.client_secret')"
+_oauth_token=$(
+  http --form --ignore-stdin POST "${_api_url}/users/token" \
+    client_id="$_client_id" \
+    client_secret="$_client_secret" \
+    grant_type=password \
+    response_type=code \
+    username="$_username" \
+    password="$_password" \
+  | jq -r '.access_token'
+)
+
+http -v "${_method}" "${_api_url}${_api_path}" \
+  Authorization:"$_oauth_token" \
+  $@
