@@ -1,7 +1,7 @@
 _service=1
 
 if [[ ! -z "$1" ]]; then
-  service="$1"
+  _service="$1"
 fi
 
 _service_line=""

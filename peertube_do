@@ -11,7 +11,7 @@ shift
 
 _method="GET"
 if [[ ! -z "$1" ]]; then
-  _method="$1"
+  _method="POST"
   shift
 fi
 
