@@ -1,12 +1,85 @@
 #!/usr/bin/env bash
 
 if [[ -z "$1" ]]; then
-  echo "Provide video description in first argument"
-  exit 228
+  echo "Provide file path in the first argument"
+  exit 221
 fi
+_file_path="$1"
+
+if [[ -z "$2" ]]; then
+  echo "Provide video description in the second argument"
+  exit 222
+fi
+_video_description="$2"
+
+if [[ -z "$3" ]]; then
+  echo "Provide the channel to post on in the third argument"
+  exit 223
+fi
+_channel_name="$3"
+
+_first_destination_id=0
+if [[ ! -z "$4" ]]; then
+  _first_destination_id="$4"
+fi
+echo "We're going to skip ${_first_destination_id} initial upload attempts."
+
+_last_destination_id=256
+if [[ ! -z "$5" ]]; then
+  _last_destination_id="$5"
+fi
+echo "We're going to stop uploading before visiting destination number ${_last_destination_id}."
 
 _multiupload_secret="$(passveil show peertube/multiupload.json)"
 
-echo "$_multiupload_secret" | jq -c '.[]' | while read x; do
+_upload_name=$(basename "$_file_path" | cut -d. -f1)
 
+_destination_number=0
+echo "$_multiupload_secret" | jq -c '.[]' | while read x; do
+  ((_destination_number++))
+  echo "Setting up upload to destination number ${_destination_number}."
+  if ((_first_destination_id > 0)); then
+    echo "Skipping ${_first_destination_id} destinations."
+    ((_first_destination_id--))
+    continue
+  fi
+  if ((_destination_number >= _last_destination_id)); then
+    echo "Stopping before visiting destination number ${_destination_number}."
+    break
+  fi
+  if [[ -z "$x" ]]; then
+    echo "Empty secret line... Skipping..."
+    continue
+  fi
+
+  _a=$(echo $x | peertube_aup | sed "1q;d")
+  _u=$(echo $x | peertube_aup | sed "2q;d")
+  _p=$(echo $x | peertube_aup | sed "3q;d")
+
+  echo "Uploading $_file_path to ${_channel_name} at destination number ${_destination_number}..."
+
+  echo "https://${_a}/api/v1/video-channels/$_channel_name"
+  http --ignore-stdin -v GET "https://${_a}/api/v1/video-channels/$_channel_name"
+  echo " * * * "
+
+  _channel_id=$(http --ignore-stdin -b GET "https://${_a}/api/v1/video-channels/$_channel_name" | jq -r '.id')
+  echo "LOL our ChannelId is ${_channel_id}..."
+  echo " * * * "
+
+  if [[ -z $_channel_id ]]; then
+    echo "Can't find the channel ID. Skipping destination number ${_destination_number}."
+    continue
+  fi
+  echo "Authenticating..."
+  _oauth_token=$(echo $x | peertube_aup | peertube_auth)
+  echo "This may take a while..."
+  curl -s "https://${_a}/api/v1/videos/upload" \
+    -H "Authorization: Bearer ${_oauth_token}" \
+    --max-time 3600 \
+    --form videofile=@"$_file_path" \
+    --form channelId=$_channel_id \
+    --form name="$_upload_name" \
+    --form description="$_video_description" \
+    --form privacy=1 \
+    --form license=5
 done
