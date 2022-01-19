@@ -1,6 +1,8 @@
-read _fqdn
-read _username
-read _password
+#!/usr/bin/env bash
+
+read -r _fqdn
+read -r _username
+read -r _password
 
 _api_url="https://${_fqdn}/api/v1"
 _oauth_client_data="$(http -b GET "${_api_url}/oauth-clients/local")"
@@ -8,7 +10,7 @@ _oauth_client_data="$(http -b GET "${_api_url}/oauth-clients/local")"
 _client_id="$(echo "$_oauth_client_data" | jq -r '.client_id')"
 _client_secret="$(echo "$_oauth_client_data" | jq -r '.client_secret')"
 _oauth_token=$(
-  http --form ${_multipart_maybe} --ignore-stdin POST "${_api_url}/users/token" \
+  http --form --ignore-stdin POST "${_api_url}/users/token" \
     client_id="$_client_id" \
     client_secret="$_client_secret" \
     grant_type=password \

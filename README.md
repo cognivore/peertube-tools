@@ -64,7 +64,3 @@ Arguments are explained right below, and more information about secrets are in t
 
     ]
     """
-
-# Important constraints
-
- - Don't use `"` and `\` in your passwords, usernames and channel names.

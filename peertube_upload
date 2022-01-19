@@ -19,13 +19,13 @@ fi
 _channel_name="$3"
 
 _first_destination_id=0
-if [[ ! -z "$4" ]]; then
+if [[ -n "$4" ]]; then
   _first_destination_id="$4"
 fi
 echo "We're going to skip ${_first_destination_id} initial upload attempts."
 
 _last_destination_id=256
-if [[ ! -z "$5" ]]; then
+if [[ -n "$5" ]]; then
   _last_destination_id="$5"
 fi
 echo "We're going to stop uploading before visiting destination number ${_last_destination_id}."
@@ -35,7 +35,7 @@ _multiupload_secret="$(passveil show peertube/multiupload.json)"
 _upload_name=$(basename "$_file_path" | cut -d. -f1)
 
 _destination_number=0
-echo "$_multiupload_secret" | jq -c '.[]' | while read x; do
+echo "$_multiupload_secret" | jq -c '.[]' | while read -r x; do
   ((_destination_number++))
   echo "Setting up upload to destination number ${_destination_number}."
   if ((_first_destination_id > 0)); then
@@ -52,9 +52,9 @@ echo "$_multiupload_secret" | jq -c '.[]' | while read x; do
     continue
   fi
 
-  _a=$(echo $x | peertube_aup | sed "1q;d")
-  _u=$(echo $x | peertube_aup | sed "2q;d")
-  _p=$(echo $x | peertube_aup | sed "3q;d")
+  _a=$(echo "$x" | peertube_aup | sed "1q;d")
+  _u=$(echo "$x" | peertube_aup | sed "2q;d")
+  _p=$(echo "$x" | peertube_aup | sed "3q;d")
 
   echo "Uploading $_file_path to ${_channel_name} at destination number ${_destination_number}..."
 
@@ -63,7 +63,7 @@ echo "$_multiupload_secret" | jq -c '.[]' | while read x; do
   echo " * * * "
 
   _channel_id=$(http --ignore-stdin -b GET "https://${_a}/api/v1/video-channels/$_channel_name" | jq -r '.id')
-  echo "LOL our ChannelId is ${_channel_id}..."
+  echo "Our ChannelId is ${_channel_id}..."
   echo " * * * "
 
   if [[ -z $_channel_id ]]; then
@@ -71,13 +71,13 @@ echo "$_multiupload_secret" | jq -c '.[]' | while read x; do
     continue
   fi
   echo "Authenticating..."
-  _oauth_token=$(echo $x | peertube_aup | peertube_auth)
+  _oauth_token=$(echo "$x" | peertube_aup | peertube_auth)
   echo "This may take a while..."
   curl -s "https://${_a}/api/v1/videos/upload" \
     -H "Authorization: Bearer ${_oauth_token}" \
     --max-time 3600 \
     --form videofile=@"$_file_path" \
-    --form channelId=$_channel_id \
+    --form channelId="$_channel_id" \
     --form name="$_upload_name" \
     --form description="$_video_description" \
     --form privacy=1 \
